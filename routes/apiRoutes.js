@@ -96,7 +96,7 @@ router.post("/login", async (req, res) => {
 router.get("/user/me", auth, async (req, res) => {
   try {
     // Access the user information from req.user (added by the auth middleware)
-    const { _id } = req.user;
+    const { _id } = req.user || {};
 
     if (!_id) {
       return res.status(401).json({ error: "No user logged in" });
@@ -122,25 +122,30 @@ router.get("/user/me", auth, async (req, res) => {
   }
 });
 
+const allowedUpdates = ["name", "email", "profile_image"];
+
 router.put("/user/me", auth, async (req, res) => {
   try {
     const userId = req.user._id;
     const updates = req.body;
 
-    // Fetch the user based on the user ID
-    const user = await User.findById(userId);
+    // Validate updates to ensure only allowed fields are modified
+    const isValidOperation = Object.keys(updates).every((update) =>
+      allowedUpdates.includes(update)
+    );
+    if (!isValidOperation) {
+      return res.status(400).json({ error: "Invalid updates" });
+    }
+
+    // Use findByIdAndUpdate for simplicity
+    const user = await User.findByIdAndUpdate(userId, updates, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    // Update user fields
-    Object.keys(updates).forEach((update) => {
-      user[update] = updates[update];
-    });
-
-    // Save the updated user data
-    await user.save();
 
     res.json({
       _id: user._id,

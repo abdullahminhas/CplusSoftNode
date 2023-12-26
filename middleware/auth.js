@@ -10,7 +10,9 @@ const auth = (req, res, next) => {
 
   try {
     // Verify and decode the token using the actual secret key
-    const decoded = jwt.verify(token, secretKey);
+    const decoded = jwt.decode(token, secretKey, {
+      clockTimestamp: Date.now() / 1000,
+    });
 
     // Make the user information available in the request object
     req.user = decoded;
